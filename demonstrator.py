@@ -32,17 +32,10 @@ def policy(reward_function, transition_beliefs, discount):
                 break
 
         # policy improvement (update pi)
-        stable = True
-        # TODO: vectorize
-        for i in range(n_states):
-            prev_max, prev_argmax = torch.max(pi[i], 0)
-            var = reward_function[i] + discount * (transition_beliefs[i] @ v)
-            pi[i] = torch.nn.functional.softmax(var).data
-            new_max, new_argmax = torch.max(pi[i], 0)
-            if prev_argmax.data[0] != new_argmax.data[0] or abs(prev_max.data[0] - new_max.data[0]) > 0.001:
-                stable = False
-
-        if stable:
+        pi_new = torch.nn.functional.softmax(reward_function + discount * (transition_beliefs @ v))
+        converged = torch.max(torch.abs(pi - pi_new)).data[0] < 0.001
+        pi = pi_new
+        if converged:
             break
 
     return pi
