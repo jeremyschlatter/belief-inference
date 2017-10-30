@@ -10,8 +10,8 @@ def policy(reward_function, transition_beliefs, discount):
     n_states, n_actions = reward_function.shape
     assert (n_states, n_actions, n_states) == transition_beliefs.shape
 
-    v = torch.Tensor(n_states)
-    pi = torch.Tensor(n_states, n_actions)
+    v = torch.zeros(n_states)
+    pi = torch.ones(n_states, n_actions) / n_actions
 
     # policy iteration
     while True:
@@ -36,7 +36,7 @@ def policy(reward_function, transition_beliefs, discount):
         stable = True
         # TODO: vectorize
         for i in range(n_states):
-            tmp = pi[i]
+            prev_max, prev_argmax = torch.max(pi[i], 0)
             # TODO: vectorize instead of comprehension
             a_values = [
                 reward_function[i, a] + discount * (transition_beliefs[i, a] @ v)
@@ -44,7 +44,8 @@ def policy(reward_function, transition_beliefs, discount):
             ]
             var = torch.autograd.Variable(torch.Tensor(a_values))
             pi[i] = torch.nn.functional.softmax(var).data
-            if torch.max(tmp, 0)[1][0] != torch.max(pi[i], 0)[1][0]:
+            new_max, new_argmax = torch.max(pi[i], 0)
+            if prev_argmax[0] != new_argmax[0] or abs(prev_max[0] - new_max[0]) > 0.001:
                 stable = False
 
         if stable:
