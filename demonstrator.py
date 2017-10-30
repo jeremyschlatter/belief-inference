@@ -6,10 +6,11 @@ def policy(reward_function, transition_beliefs):
     reward_function: state, action -> real
     transition_beliefs: state, action -> Δstate
     policy result: state -> Δaction
-
-    v = torch
     '''
-    return torch.Tensor(3, 2)
+    n_states, n_actions = reward_function.shape
+    assert (n_states, n_actions, n_states) == transition_beliefs.shape
+
+    return torch.Tensor(n_states, n_actions)
 
 
 if __name__ == '__main__':
