@@ -8,10 +8,10 @@ def policy(reward_function, transition_beliefs, discount):
     policy result: state -> Δaction
     '''
     n_states, n_actions = reward_function.shape
-    assert (n_states, n_actions, n_states) == transition_beliefs.shape
+    assert (n_states, n_actions, n_states) == transition_beliefs.data.shape
 
-    v = torch.zeros(n_states)
-    pi = torch.ones(n_states, n_actions) / n_actions
+    v = torch.autograd.Variable(torch.zeros(n_states), requires_grad=False)
+    pi = torch.autograd.Variable(torch.ones(n_states, n_actions) / n_actions, requires_grad=False)
 
     # policy iteration
     while True:
@@ -56,11 +56,11 @@ def policy(reward_function, transition_beliefs, discount):
 
 if __name__ == '__main__':
     reward_function = torch.Tensor([[-1, 1], [0, 1], [0, 2]])
-    transition_beliefs = torch.Tensor([
+    transition_beliefs = torch.autograd.Variable(torch.Tensor([
         [[1, 0, 0], [0, 1, 0]],
         [[1, 0, 0], [0, 0, 1]],
         [[0, 1, 0], [0, 0, 1]],
-    ])
+    ]), requires_grad=True)
     discount = 0.9
 
     pi = policy(reward_function, transition_beliefs, discount)
