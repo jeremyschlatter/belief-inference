@@ -17,15 +17,7 @@ def policy(reward_function, transition_beliefs, discount):
     while True:
         # policy evaluation (update v)
         while True:
-            # TODO: vectorize
-            v_new = torch.autograd.Variable(torch.Tensor(n_states), requires_grad=False)
-            for i in range(n_states):
-                next_state_dist = transition_beliefs[i].t() @ pi[i]
-                next_state_value = next_state_dist @ (discount * v)
-                this_state_value = reward_function[i] @ pi[i]
-
-                v_new[i] = this_state_value + next_state_value
-
+            v_new = (transition_beliefs * pi.unsqueeze(-1)).sum(dim=1) @ (discount * v) + (reward_function * pi).sum(dim=1)
             converged = torch.max(torch.abs(v - v_new)).data[0] < 0.001
             v = v_new
             if converged:
