@@ -1,12 +1,18 @@
 import torch
 
 
-def policy(reward_function, transition_beliefs, discount):
+def policy(reward_function, transition_beliefs, discount, max_iters=100):
     '''
     reward_function: state, action -> real
     transition_beliefs: state, action -> Δstate
     policy result: state -> Δaction
     '''
+    # reward_function and transition_beliefs could be either Tensors or Variables.
+    if isinstance(reward_function, torch.Tensor):
+        reward_function = torch.autograd.Variable(reward_function)
+    if isinstance(transition_beliefs, torch.Tensor):
+        transition_beliefs = torch.autograd.Variable(transition_beliefs)
+
     n_states, n_actions = reward_function.data.shape
     assert (n_states, n_actions, n_states) == transition_beliefs.data.shape
 
@@ -14,9 +20,9 @@ def policy(reward_function, transition_beliefs, discount):
     pi = torch.autograd.Variable(torch.ones(n_states, n_actions) / n_actions, requires_grad=False)
 
     # policy iteration
-    while True:
+    for i in range(max_iters):
         # policy evaluation (update v)
-        while True:
+        for j in range(max_iters):
             v_new = (transition_beliefs * pi.unsqueeze(-1)).sum(dim=1) @ (discount * v) + (reward_function * pi).sum(dim=1)
             converged = torch.max(torch.abs(v - v_new)).data[0] < 0.001
             v = v_new
