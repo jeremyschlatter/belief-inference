@@ -68,7 +68,7 @@ def test_belief_inference():
     trajs = mdp.demonstrate(t_real, t_belief, R, discount, 1000)
 
     def loss(guess):
-        return ((t_real - t_guess) ** 2).sum().data[0]
+        return ((t_belief - t_guess) ** 2).sum().data[0]
     t_guess = Variable(random_transitions(s, a), requires_grad=True)
     initial_loss = loss(t_guess)
 

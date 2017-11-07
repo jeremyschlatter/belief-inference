@@ -74,6 +74,32 @@ def demonstrate(t_real, t_belief, r, discount, n, length=50):
     return trajs
 
 
+def mean_choice_log_likelihood(pi, trajs):
+    choices = trajs.view(-1, 2)
+    likelihoods = pi.index_select(0, choices[:, 0]).gather(1, choices[:, 1:]).squeeze(1)
+    # TODO: better implementation supported by the next > 0.2.0_1 pytorch release
+    # likelihoods = pi[choices[:, 0], choices[:, 1]]
+    return likelihoods.log().mean()
+
+
+def infer_belief(t_real, r, discount, trajs, initial_guess=None):
+    if initial_guess is None:
+        initial_guess = torch.rand(*t_real.size())
+
+    t_logits = Variable(initial_guess.data.log(), requires_grad=True)
+
+    optimizer = torch.optim.Adam([t_logits])
+    for _ in range(200):
+        optimizer.zero_grad()
+        t_guess = torch.nn.functional.softmax(t_logits)
+        pi = policy(r, t_guess, discount)
+        loss = -mean_choice_log_likelihood(pi, trajs)
+        loss.backward()
+        optimizer.step()
+
+    return t_guess
+
+
 if __name__ == '__main__':
     reward_function = Variable(torch.Tensor([[-1, 1], [0, 1], [0, 2]]), requires_grad=False)
     transition_beliefs = Variable(torch.Tensor([
