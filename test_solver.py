@@ -61,15 +61,15 @@ def test_policy_gradient():
 @manual_seed
 def test_belief_inference():
     s, a = 20, 3
-    t_real = Variable(random_transitions(s, a))
-    t_belief = Variable(random_transitions(s, a))
-    R = torch.rand(s, a) * 10  # noqa
+    t_real = mdp.gpu(Variable(random_transitions(s, a)))
+    t_belief = mdp.gpu(Variable(random_transitions(s, a)))
+    R = mdp.gpu(torch.rand(s, a) * 10)  # noqa
     discount = 0.9
     trajs = mdp.demonstrate(t_real, t_belief, R, discount, 1000)
 
     def loss(guess):
         return ((t_belief - t_guess) ** 2).sum().data[0]
-    t_guess = Variable(random_transitions(s, a), requires_grad=True)
+    t_guess = mdp.gpu(Variable(random_transitions(s, a), requires_grad=True))
     initial_loss = loss(t_guess)
 
     t_guess = mdp.infer_belief(t_real, R, discount, trajs, initial_guess=t_guess)

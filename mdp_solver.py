@@ -4,10 +4,11 @@ from torch.autograd import Variable
 
 
 def _to_variable(x):
-    if isinstance(x, torch.Tensor):
-        return Variable(x)
-    assert isinstance(x, Variable)
-    return x
+    return x if isinstance(x, Variable) else Variable(x)
+
+
+def gpu(x):
+    return x.cuda() if torch.cuda.is_available() else x
 
 
 def policy(reward_function, transition_beliefs, discount, max_iters=100):
@@ -23,8 +24,8 @@ def policy(reward_function, transition_beliefs, discount, max_iters=100):
     n_states, n_actions = reward_function.size()
     assert (n_states, n_actions, n_states) == transition_beliefs.size()
 
-    v = Variable(torch.zeros(n_states), requires_grad=False)
-    pi = Variable(torch.ones(n_states, n_actions) / n_actions, requires_grad=False)
+    v = Variable(gpu(torch.zeros(n_states)), requires_grad=False)
+    pi = Variable(gpu(torch.ones(n_states, n_actions) / n_actions), requires_grad=False)
 
     # policy iteration
     for i in range(max_iters):
@@ -47,16 +48,16 @@ def policy(reward_function, transition_beliefs, discount, max_iters=100):
 
 
 def demonstrate(t_real, t_belief, r, discount, n, length=50):
-    t_real = _to_variable(t_real)
-    t_belief = _to_variable(t_belief)
-    r = _to_variable(r)
+    t_real = gpu(_to_variable(t_real))
+    t_belief = gpu(_to_variable(t_belief))
+    r = gpu(_to_variable(r))
 
     n_states, n_actions = r.size()
     assert (n_states, n_actions, n_states) == t_real.size()
     assert (n_states, n_actions, n_states) == t_belief.size()
 
     pi = policy(r, t_belief, discount)  # .expand(n, n_states, n_actions)
-    states = Variable(torch.zeros(n).long())
+    states = Variable(gpu(torch.zeros(n).long()))
     trajs = None
 
     for _ in range(length):
@@ -86,7 +87,10 @@ def infer_belief(t_real, r, discount, trajs, initial_guess=None):
     if initial_guess is None:
         initial_guess = torch.rand(*t_real.size())
 
-    t_logits = Variable(initial_guess.data.log(), requires_grad=True)
+    t_logits = Variable(gpu(initial_guess.data.log()), requires_grad=True)
+    t_real = gpu(t_real)
+    r = gpu(r)
+    trajs = gpu(trajs)
 
     optimizer = torch.optim.Adam([t_logits])
     for _ in range(200):
