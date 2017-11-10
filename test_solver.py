@@ -20,7 +20,7 @@ def manual_seed(f):
         # reproducibility), but also different in most tests (lets us explore
         # seed space a little more).
         torch.manual_seed(sum(ord(c) for c in f.__name__))
-        f()
+        return f()
     return wrapper
 
 
