@@ -121,7 +121,7 @@ def infer_belief(t_real, r, discount, trajs, initial_guess=None):
     trajs = gpu(trajs)
 
     optimizer = torch.optim.Adam([t_logits])
-    for _ in range(200):
+    for _ in range(100):
         optimizer.zero_grad()
         t_guess = F.softmax(t_logits)
         pi = policy(r, t_guess, discount)
