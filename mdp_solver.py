@@ -1,5 +1,6 @@
 import torch
 
+import torch.nn.functional as F
 from torch.autograd import Variable
 
 
@@ -24,6 +25,13 @@ def policy(reward_function, transition_beliefs, discount, max_iters=100):
     n_states, n_actions = reward_function.size()
     assert (n_states, n_actions, n_states) == transition_beliefs.size()
 
+    if False:
+        return policy_iteration(reward_function, transition_beliefs, discount, max_iters, n_states, n_actions)
+    else:
+        return value_iteration(reward_function, transition_beliefs, discount, max_iters, n_states, n_actions)
+
+
+def policy_iteration(reward_function, transition_beliefs, discount, max_iters, n_states, n_actions):
     v = Variable(gpu(torch.zeros(n_states)), requires_grad=False)
     pi = Variable(gpu(torch.ones(n_states, n_actions) / n_actions), requires_grad=False)
 
@@ -38,13 +46,33 @@ def policy(reward_function, transition_beliefs, discount, max_iters=100):
                 break
 
         # policy improvement (update pi)
-        pi_new = torch.nn.functional.softmax(reward_function + discount * (transition_beliefs @ v))
+        pi_new = F.softmax(reward_function + discount * (transition_beliefs @ v))
         converged = torch.max(torch.abs(pi - pi_new)).data[0] < 0.001
         pi = pi_new
         if converged:
             break
 
     return pi
+
+
+def value_iteration(reward_function, transition_beliefs, discount, max_iters, n_states, n_actions):
+    v = Variable(gpu(torch.zeros(n_states)), requires_grad=False)
+
+    for i in range(max_iters):
+        # s x a x s' values
+        v_new = transition_beliefs * (reward_function[:, :, None] + discount * v[None, None, :])
+        # sum over future states
+        v_new = v_new.sum(dim=2)
+        # softmax over actions
+        v_new = (F.softmax(v_new) * v_new).sum(dim=1)
+        # v_new = v_new.exp().sum(dim=1).log()
+
+        converged = torch.max(torch.abs(v - v_new)).data[0] < 0.001
+        v = v_new
+        if converged:
+            break
+
+    return F.softmax(reward_function + discount * (transition_beliefs @ v))
 
 
 def demonstrate(t_real, t_belief, r, discount, n, length=50):
@@ -95,7 +123,7 @@ def infer_belief(t_real, r, discount, trajs, initial_guess=None):
     optimizer = torch.optim.Adam([t_logits])
     for _ in range(200):
         optimizer.zero_grad()
-        t_guess = torch.nn.functional.softmax(t_logits)
+        t_guess = F.softmax(t_logits)
         pi = policy(r, t_guess, discount)
         loss = -mean_choice_log_likelihood(pi, trajs)
         loss.backward()
