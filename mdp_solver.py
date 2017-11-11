@@ -115,7 +115,7 @@ def avg_reward(trajs, r):
 
 def mean_choice_log_likelihood(pi, trajs):
     choices = trajs.view(-1, 2)
-    likelihoods = pi[choices[:, 0], choices[:, 1]]
+    likelihoods = pi[choices.split(1, 1)]
     return likelihoods.log().mean()
 
 
