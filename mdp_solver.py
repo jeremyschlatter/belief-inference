@@ -8,6 +8,10 @@ def _to_variable(x):
     return x if isinstance(x, Variable) else Variable(x)
 
 
+def _to_tensor(x):
+    return x.data if isinstance(x, Variable) else x
+
+
 def gpu(x):
     return x.cuda() if torch.cuda.is_available() else x
 
@@ -101,6 +105,14 @@ def demonstrate(t_real, t_belief, r, discount, n, length=50):
         states = state_dists.multinomial(1).squeeze(1)
 
     return trajs
+
+
+def avg_reward(trajs, r):
+    trajs = _to_tensor(trajs)
+    r = _to_tensor(r)
+
+    trajs = trajs.view(-1, 2)
+    return r[trajs[:, 0], trajs[:, 1]].mean()
 
 
 def mean_choice_log_likelihood(pi, trajs):
