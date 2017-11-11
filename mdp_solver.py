@@ -99,9 +99,8 @@ def demonstrate(t_real, t_belief, r, discount, n, length=50):
 
         trajs = frame if trajs is None else torch.cat((trajs, frame), 1)
 
-        state_dists = t_real.index_select(0, states).gather(1, actions.view(n, 1, 1).expand(n, 1, n_states)).squeeze(1)
-        # TODO: better implementation supported by the next > 0.2.0_1 pytorch release
-        # state_dists = t_real[states, actions.squeeze(1)]
+        # TODO: delete ".data" in the next > 0.2.0_1 pytorch release
+        state_dists = t_real[states.data, actions.squeeze(1).data]
         states = state_dists.multinomial(1).squeeze(1)
 
     return trajs
@@ -117,9 +116,8 @@ def avg_reward(trajs, r):
 
 def mean_choice_log_likelihood(pi, trajs):
     choices = trajs.view(-1, 2)
-    likelihoods = pi.index_select(0, choices[:, 0]).gather(1, choices[:, 1:]).squeeze(1)
-    # TODO: better implementation supported by the next > 0.2.0_1 pytorch release
-    # likelihoods = pi[choices[:, 0], choices[:, 1]]
+    # TODO: delete ".data" in the next > 0.2.0_1 pytorch release
+    likelihoods = pi[choices[:, 0].data, choices[:, 1].data]
     return likelihoods.log().mean()
 
 
