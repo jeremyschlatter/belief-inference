@@ -12,7 +12,7 @@ def gpu(x):
     return x.cuda() if torch.cuda.is_available() else x
 
 
-def policy(reward_function, transition_beliefs, discount, max_iters=100):
+def policy(reward_function, transition_beliefs, discount, max_iters=20):
     '''
     reward_function: state, action -> real
     transition_beliefs: state, action -> Δstate
