@@ -81,7 +81,7 @@ def _inference_test_helper(t_real, t_belief, r):
 
 @manual_seed
 def test_belief_inference():
-    s, a = 64, 4
+    s, a = 20, 4
     t_real = mdp.gpu(Variable(random_transitions(s, a)))
     t_belief = mdp.gpu(Variable(random_transitions(s, a)))
     r = mdp.gpu(torch.rand(s, a) * 10)
