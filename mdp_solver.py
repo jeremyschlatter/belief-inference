@@ -80,16 +80,16 @@ def value_iteration(reward_function, transition_beliefs, discount, max_iters, n_
 
 
 def demonstrate(t_real, t_belief, r, discount, n, length=50):
-    t_real = gpu(_to_variable(t_real))
-    t_belief = gpu(_to_variable(t_belief))
-    r = gpu(_to_variable(r))
+    t_real = gpu(_to_tensor(t_real))
+    t_belief = gpu(_to_tensor(t_belief))
+    r = gpu(_to_tensor(r))
 
     n_states, n_actions = r.size()
     assert (n_states, n_actions, n_states) == t_real.size()
     assert (n_states, n_actions, n_states) == t_belief.size()
 
-    pi = policy(r, t_belief, discount)  # .expand(n, n_states, n_actions)
-    states = Variable(gpu(torch.zeros(n).long()))
+    pi = _to_tensor(policy(r, t_belief, discount))
+    states = gpu(torch.zeros(n).long())
     trajs = None
 
     for _ in range(length):
@@ -99,8 +99,7 @@ def demonstrate(t_real, t_belief, r, discount, n, length=50):
 
         trajs = frame if trajs is None else torch.cat((trajs, frame), 1)
 
-        # TODO: delete ".data" in the next > 0.2.0_1 pytorch release
-        state_dists = t_real[states.data, actions.squeeze(1).data]
+        state_dists = t_real[states, actions.squeeze(1)]
         states = state_dists.multinomial(1).squeeze(1)
 
     return trajs
@@ -125,10 +124,13 @@ def infer_belief(t_real, r, discount, trajs, initial_guess=None):
     if initial_guess is None:
         initial_guess = torch.rand(*t_real.size())
 
+    def f(x):
+        return _to_variable(gpu(x))
+
     t_logits = Variable(gpu(initial_guess.data.log()), requires_grad=True)
-    t_real = gpu(t_real)
-    r = gpu(r)
-    trajs = gpu(trajs)
+    t_real = f(t_real)
+    r = f(r)
+    trajs = f(trajs)
 
     optimizer = torch.optim.Adam([t_logits])
     for _ in range(100):
