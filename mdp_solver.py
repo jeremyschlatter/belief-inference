@@ -113,30 +113,41 @@ def avg_reward(trajs, r):
     return r[trajs[:, 0], trajs[:, 1]].mean()
 
 
-def mean_choice_log_likelihood(pi, trajs):
-    choices = trajs.view(-1, 2)
-    likelihoods = pi[choices.split(1, 1)]
-    return likelihoods.log().mean()
-
-
-def infer_belief(t_real, r, discount, trajs, initial_guess=None):
-    if initial_guess is None:
-        initial_guess = torch.rand(*t_real.size())
-
-    def f(x):
-        return _to_variable(gpu(x))
-
-    t_logits = Variable(gpu(initial_guess.data.log()), requires_grad=True)
-    t_real = f(t_real)
-    r = f(r)
+def infer_belief(r, discount, trajs, initial_guess):
+    assert torch.is_tensor(initial_guess)
+    t_logits = Variable(gpu(initial_guess.log()), requires_grad=True)
+    r = _to_variable(gpu(r))
     trajs = gpu(trajs)
+
+    def mean_choice_log_likelihood(pi, trajs):
+        choices = trajs.view(-1, 2)
+        likelihoods = pi[choices.split(1, 1)]
+        return likelihoods.log().mean()
+
+    def mean_transition_log_likelihood(t, trajs):
+        state_action_states = torch.cat((trajs[:, :-1, :], trajs[:, 1:, 0:1]), dim=2)
+        likelihoods = t[state_action_states.view(-1, 3).split(1, 1)]
+        return likelihoods.log().mean()
+
+    def mean_entropy(ps):
+        return (ps * ps.log()).sum(dim=-1).mean()
 
     optimizer = torch.optim.Adam([t_logits])
     for _ in range(100):
         optimizer.zero_grad()
         t_guess = F.softmax(t_logits)
         pi = policy(r, t_guess, discount)
-        loss = -mean_choice_log_likelihood(pi, trajs)
+        loss = 0
+
+        # Increase the likelihood of demonstrator's choices.
+        loss += 1 * -mean_choice_log_likelihood(pi, trajs)
+
+        # Increase accuracy of demonstrator's beliefs.
+        loss += 2 * -mean_transition_log_likelihood(t_guess, trajs)
+
+        # Increase entropy of demonstrator's beliefs.
+        loss += 1 * -mean_entropy(t_guess)
+
         loss.backward()
         optimizer.step()
 

@@ -68,11 +68,11 @@ def _inference_test_helper(t_real, t_belief, r):
     trajs = mdp.demonstrate(t_real, t_belief, r, discount, 1000)
 
     def loss(guess):
-        return ((t_belief - t_guess) ** 2).sum().data[0]
-    t_guess = mdp.gpu(Variable(random_transitions(s, a), requires_grad=True))
+        return ((mdp._to_tensor(t_belief) - mdp._to_tensor(t_guess)) ** 2).sum()
+    t_guess = mdp.gpu(random_transitions(s, a))
     initial_loss = loss(t_guess)
 
-    t_guess = mdp.infer_belief(t_real, r, discount, trajs, initial_guess=t_guess)
+    t_guess = mdp.infer_belief(r, discount, trajs, t_guess)
     final_loss = loss(t_guess)
 
     print(f'initial loss: {initial_loss}\nfinal loss: {final_loss}')
