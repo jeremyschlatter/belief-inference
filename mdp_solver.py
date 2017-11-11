@@ -115,8 +115,7 @@ def avg_reward(trajs, r):
 
 def mean_choice_log_likelihood(pi, trajs):
     choices = trajs.view(-1, 2)
-    # TODO: delete ".data" in the next > 0.2.0_1 pytorch release
-    likelihoods = pi[choices[:, 0].data, choices[:, 1].data]
+    likelihoods = pi[choices[:, 0], choices[:, 1]]
     return likelihoods.log().mean()
 
 
@@ -130,7 +129,7 @@ def infer_belief(t_real, r, discount, trajs, initial_guess=None):
     t_logits = Variable(gpu(initial_guess.data.log()), requires_grad=True)
     t_real = f(t_real)
     r = f(r)
-    trajs = f(trajs)
+    trajs = gpu(trajs)
 
     optimizer = torch.optim.Adam([t_logits])
     for _ in range(100):
